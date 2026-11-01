@@ -1,0 +1,6 @@
+{
+  "name": "Efsane Koşucu: Bibendum, Baldi & Komşu 2D Endless Runner",
+  "description": "Mobil uyumlu 2D HTML5 Canvas Sonsuz Koşucu oyunu. Bibendum (Michelin), Baldi ve Hello Neighbor karakterleri, özel yetenekler, lastik/cetvel/anahtar toplamalar ve dokunmatik kontroller.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

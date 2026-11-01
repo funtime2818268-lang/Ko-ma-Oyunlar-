@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Efsane Koşucu: Bibendum, Baldi &amp; Komşu</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #020617; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; touch-action: none; }
+    canvas { display: block; width: 100%; height: 100%; }
+    #ui-layer { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 12px; z-index: 10; }
+    .interactive { pointer-events: auto; }
+    .hud-bar { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+    .badge-box { background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 16px; padding: 6px 12px; color: #fff; font-size: 13px; font-weight: 800; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(8px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+    .btn { background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(148, 163, 184, 0.4); color: #fff; font-weight: 800; border-radius: 16px; padding: 8px 14px; font-size: 12px; cursor: pointer; transition: transform 0.1s; display: flex; align-items: center; gap: 6px; }
+    .btn:active { transform: scale(0.92); }
+    .btn-gold { background: linear-gradient(135deg, #f59e0b, #ea580c); color: #020617; border: none; font-weight: 900; }
+    .controls-bar { display: flex; justify-content: space-between; width: 100%; padding-bottom: 8px; }
+    .ctrl-btn { width: 110px; height: 90px; border-radius: 24px; color: #fff; font-size: 15px; font-weight: 900; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.2); cursor: pointer; transition: transform 0.1s; }
+    .ctrl-btn:active { transform: scale(0.94); }
+    .ctrl-slide { background: linear-gradient(to top, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85)); border-color: #38bdf8; }
+    .ctrl-jump { background: linear-gradient(to top, rgba(120, 53, 15, 0.95), rgba(217, 119, 6, 0.85)); border-color: #facc15; }
+    #modal { position: absolute; inset: 0; background: rgba(2, 6, 23, 0.88); backdrop-filter: blur(10px); z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; color: #fff; }
+    .char-grid { display: flex; gap: 14px; max-width: 600px; width: 100%; margin: 16px 0; justify-content: center; }
+    .char-card { flex: 1; max-width: 170px; background: rgba(30, 41, 59, 0.7); border: 2px solid rgba(148, 163, 184, 0.3); border-radius: 20px; padding: 12px; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, border-color 0.2s; }
+    .char-card.selected { border-color: #f59e0b; background: rgba(30, 41, 59, 0.95); transform: scale(1.05); box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+    .char-card h4 { font-size: 14px; margin-top: 6px; font-weight: 900; }
+    .char-card p { font-size: 10px; color: #94a3b8; text-align: center; margin-top: 2px; }
+    #toast-box { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; z-index: 100; pointer-events: none; }
+    .toast { background: rgba(15, 23, 42, 0.95); border: 2px solid #f59e0b; color: #fef08a; padding: 8px 16px; border-radius: 14px; font-size: 12px; font-weight: 800; box-shadow: 0 4px 20px rgba(0,0,0,0.6); animation: toastAnim 0.3s ease; }
+    @keyframes toastAnim { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+  <div id="toast-box"></div>
+  <canvas id="game"></canvas>
+
+  <div id="ui-layer">
+    <!-- Top HUD -->
+    <div class="hud-bar interactive">
+      <div style="display:flex; gap:8px;">
+        <div class="badge-box" id="health-box">❤️❤️❤️</div>
+        <div class="badge-box" style="border-color:#eab308; color:#fde047;" id="seed-box">🌻 <span id="seed-count">0</span></div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <div class="badge-box" style="border-color:#38bdf8;" id="score-box">SKOR: <span id="score">0</span></div>
+        <button class="btn" id="btn-tod">🌅 ZAMAN</button>
+        <button class="btn" id="btn-weather">☀️ HAVA</button>
+        <button class="btn btn-gold" id="btn-menu">MENÜ</button>
+      </div>
+    </div>
+
+    <!-- Bottom Controls -->
+    <div class="controls-bar interactive">
+      <button class="ctrl-btn ctrl-slide" id="btn-slide">
+        <span style="font-size:24px;">👇</span>
+        <span>EĞİL / KAY</span>
+      </button>
+      <button class="ctrl-btn ctrl-jump" id="btn-jump">
+        <span style="font-size:24px;">🚀</span>
+        <span>ZIPLA</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Character Select / Pause Modal -->
+  <div id="modal">
+    <h1 style="font-size: 26px; font-weight:900; background: linear-gradient(to right, #facc15, #f97316); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">EFSANE KOŞUCU 2D</h1>
+    <p style="font-size: 12px; color:#cbd5e1; margin-top:4px;">Karakterini Seç &amp; Gazı Kökleyin!</p>
+
+    <div class="char-grid">
+      <div class="char-card selected" data-char="bibendum">
+        <div style="font-size:36px;">⚪</div>
+        <h4>Bibendum</h4>
+        <p>Michelin Adamı (1 Hasar Kalkanı)</p>
+      </div>
+      <div class="char-card" data-char="baldi">
+        <div style="font-size:36px;">📏</div>
+        <h4>Baldi</h4>
+        <p>Öfkeli Öğretmen (2X Puan Katlayıcı)</p>
+      </div>
+      <div class="char-card" data-char="neighbor">
+        <div style="font-size:36px;">🔑</div>
+        <h4>Komşu</h4>
+        <p>Hello Neighbor (Çift Zıplama)</p>
+      </div>
+    </div>
+
+    <button class="btn btn-gold" id="btn-play" style="padding: 12px 36px; font-size:16px; border-radius:20px;">OYUNA BAŞLA ➔</button>
+    <p style="font-size:11px; color:#94a3b8; margin-top:12px;">👆 Ekranda Yukarı/Aşağı kaydır veya butonları kullan</p>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const healthEl = document.getElementById('health-box');
+    const seedEl = document.getElementById('seed-count');
+    const modal = document.getElementById('modal');
+    const toastBox = document.getElementById('toast-box');
+
+    let W = canvas.width = window.innerWidth;
+    let H = canvas.height = window.innerHeight;
+    window.addEventListener('resize', () => {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+      groundY = H * 0.78;
+    });
+
+    let groundY = H * 0.78;
+    let isPlaying = false;
+    let score = 0;
+    let seeds = parseInt(localStorage.getItem('runner_seeds') || '0', 10);
+    seedEl.textContent = seeds;
+    let lives = 3;
+    let gameSpeed = 380;
+    let scrollOffset = 0;
+    let charId = 'bibendum';
+    let hasShield = true;
+    let jumps = 1;
+    let maxJumps = 1;
+    let timeOfDay = 'sunset';
+    let weather = 'clear';
+    let shakeTimer = 0;
+    let shakeIntensity = 0;
+
+    const todList = ['sunrise', 'noon', 'sunset', 'night'];
+    const weatherList = ['clear', 'rain', 'snow'];
+
+    // Audio SFX
+    const actx = new (window.AudioContext || window.webkitAudioContext)();
+    function beep(freq, duration = 0.1, type = 'sine') {
+      try {
+        const osc = actx.createOscillator();
+        const gain = actx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, actx.currentTime);
+        gain.gain.setValueAtTime(0.2, actx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(actx.destination);
+        osc.start();
+        osc.stop(actx.currentTime + duration);
+      } catch(e){}
+    }
+
+    function showToast(text) {
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.textContent = text;
+      toastBox.appendChild(el);
+      setTimeout(() => el.remove(), 2600);
+      try {
+        if ('speechSynthesis' in window) {
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = 'tr-TR';
+          u.rate = 1.2;
+          speechSynthesis.speak(u);
+        }
+      } catch(e){}
+    }
+
+    function shake(duration = 0.25, intensity = 10) {
+      shakeTimer = duration;
+      shakeIntensity = intensity;
+    }
+
+    // Player state
+    const player = {
+      x: 120,
+      y: groundY,
+      offsetY: 0,
+      vy: 0,
+      state: 'run',
+      slideTimer: 0,
+      invul: 0
+    };
+
+    let obstacles = [];
+    let collectibles = [];
+    let particles = [];
+    let weatherParticles = [];
+
+    function initWeather() {
+      weatherParticles = [];
+      const count = weather === 'rain' ? 60 : weather === 'snow' ? 50 : 0;
+      for (let i = 0; i < count; i++) {
+        weatherParticles.push({
+          x: Math.random() * W,
+          y: Math.random() * H,
+          vy: weather === 'rain' ? 600 + Math.random() * 200 : 70 + Math.random() * 40,
+          vx: weather === 'rain' ? -40 : (Math.random() - 0.5) * 30,
+          r: Math.random() * 3 + 1
+        });
+      }
+    }
+
+    function jump() {
+      if (!isPlaying) return;
+      if (jumps > 0) {
+        player.vy = 800;
+        player.offsetY += 5;
+        player.state = 'jump';
+        jumps--;
+        beep(480, 0.15, 'square');
+      }
+    }
+
+    function slide() {
+      if (!isPlaying) return;
+      player.state = 'slide';
+      player.slideTimer = 0.6;
+      beep(240, 0.1, 'sawtooth');
+      for (let i = 0; i < 6; i++) {
+        particles.push({
+          x: player.x,
+          y: groundY - 4,
+          vx: -Math.random() * 150 - 50,
+          vy: -Math.random() * 50,
+          r: Math.random() * 3 + 1,
+          color: '#f59e0b',
+          alpha: 1
+        });
+      }
+    }
+
+    // Virtual Buttons
+    document.getElementById('btn-jump').addEventListener('touchstart', (e) => { e.preventDefault(); jump(); });
+    document.getElementById('btn-jump').addEventListener('mousedown', jump);
+    document.getElementById('btn-slide').addEventListener('touchstart', (e) => { e.preventDefault(); slide(); });
+    document.getElementById('btn-slide').addEventListener('mousedown', slide);
+
+    // Keyboard
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); jump(); }
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); slide(); }
+    });
+
+    // Touch Swipe
+    let touchStartY = 0;
+    window.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; }, { passive: true });
+    window.addEventListener('touchend', (e) => {
+      const deltaY = e.changedTouches[0].clientY - touchStartY;
+      if (deltaY < -30) jump();
+      else if (deltaY > 30) slide();
+    }, { passive: true });
+
+    // Buttons
+    document.getElementById('btn-tod').addEventListener('click', () => {
+      timeOfDay = todList[(todList.indexOf(timeOfDay) + 1) % todList.length];
+      showToast('Zaman Değişti: ' + timeOfDay.toUpperCase());
+    });
+    document.getElementById('btn-weather').addEventListener('click', () => {
+      weather = weatherList[(weatherList.indexOf(weather) + 1) % weatherList.length];
+      initWeather();
+      showToast('Hava Değişti: ' + weather.toUpperCase());
+    });
+    document.getElementById('btn-menu').addEventListener('click', () => {
+      isPlaying = false;
+      modal.style.display = 'flex';
+    });
+
+    // Character Selection
+    document.querySelectorAll('.char-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        charId = card.getAttribute('data-char');
+        beep(520, 0.08);
+      });
+    });
+
+    document.getElementById('btn-play').addEventListener('click', () => {
+      modal.style.display = 'none';
+      startGame();
+    });
+
+    function startGame() {
+      score = 0;
+      lives = 3;
+      gameSpeed = 380;
+      scrollOffset = 0;
+      obstacles = [];
+      collectibles = [];
+      particles = [];
+      player.offsetY = 0;
+      player.vy = 0;
+      player.state = 'run';
+      player.invul = 0;
+
+      if (charId === 'bibendum') { hasShield = true; maxJumps = 1; }
+      else if (charId === 'baldi') { hasShield = false; maxJumps = 1; }
+      else if (charId === 'neighbor') { hasShield = false; maxJumps = 2; }
+      jumps = maxJumps;
+
+      updateHUD();
+      initWeather();
+      isPlaying = true;
+      showToast(charId === 'bibendum' ? 'Bibendum devrede!' : charId === 'baldi' ? 'Baldi derse başladı!' : 'Komşu çift zıplamaya hazır!');
+    }
+
+    function updateHUD() {
+      scoreEl.textContent = Math.floor(score);
+      healthEl.textContent = '❤️'.repeat(Math.max(0, lives));
+      seedEl.textContent = seeds;
+    }
+
+    let spawnTimer = 1.2;
+    let collTimer = 0.8;
+    let lastTime = performance.now();
+    let frameCount = 0;
+
+    function gameLoop(now) {
+      requestAnimationFrame(gameLoop);
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+      frameCount++;
+
+      if (isPlaying) {
+        gameSpeed = Math.min(700, gameSpeed + dt * 4);
+        scrollOffset += gameSpeed * dt;
+        score += dt * (gameSpeed * 0.1) * (charId === 'baldi' ? 2 : 1);
+        updateHUD();
+
+        // Physics
+        if (player.offsetY > 0 || player.vy !== 0) {
+          player.vy -= 1800 * dt;
+          player.offsetY += player.vy * dt;
+          if (player.offsetY <= 0) {
+            player.offsetY = 0;
+            player.vy = 0;
+            player.state = 'run';
+            jumps = maxJumps;
+          }
+        }
+
+        if (player.slideTimer > 0) {
+          player.slideTimer -= dt;
+          if (player.slideTimer <= 0) player.state = 'run';
+        }
+
+        if (player.invul > 0) player.invul -= dt;
+        if (shakeTimer > 0) shakeTimer -= dt;
+
+        // Obstacle Spawn
+        spawnTimer -= dt;
+        if (spawnTimer <= 0) {
+          spawnTimer = 1.4 + Math.random() * 0.8;
+          const isHigh = Math.random() > 0.5;
+          obstacles.push({
+            x: W + 40,
+            y: isHigh ? groundY - 105 : groundY - 45,
+            w: isHigh ? 70 : 45,
+            h: 45,
+            isHigh,
+            passed: false
+          });
+        }
+
+        // Collectible Spawn
+        collTimer -= dt;
+        if (collTimer <= 0) {
+          collTimer = 1.0 + Math.random() * 0.8;
+          collectibles.push({
+            x: W + 30,
+            y: Math.random() > 0.5 ? groundY - 55 : groundY - 110,
+            w: 26,
+            h: 26,
+            type: Math.random() > 0.4 ? 'seed' : 'coin'
+          });
+        }
+
+        // Update Obstacles
+        obstacles.forEach(o => {
+          o.x -= gameSpeed * dt;
+          if (!o.passed && o.x + o.w < player.x) {
+            o.passed = true;
+            shake(0.15, 4);
+          }
+        });
+        obstacles = obstacles.filter(o => o.x + o.w > -40);
+
+        // Update Collectibles
+        collectibles.forEach(c => { c.x -= gameSpeed * dt; });
+        collectibles = collectibles.filter(c => c.x + c.w > -30);
+
+        // Collisions
+        const pBox = {
+          x: player.x - 20,
+          y: groundY - player.offsetY - (player.state === 'slide' ? 45 : 85),
+          w: 40,
+          h: player.state === 'slide' ? 40 : 80
+        };
+
+        if (player.invul <= 0) {
+          for (let o of obstacles) {
+            if (pBox.x < o.x + o.w && pBox.x + pBox.w > o.x && pBox.y < o.y + o.h && pBox.y + pBox.h > o.y) {
+              if (hasShield) {
+                hasShield = false;
+                player.invul = 1.2;
+                shake(0.3, 10);
+                beep(200, 0.3, 'sawtooth');
+                showToast('Kalkan Korudu!');
+              } else {
+                lives--;
+                player.invul = 1.5;
+                shake(0.4, 18);
+                beep(120, 0.4, 'sawtooth');
+                showToast('Hasar Aldın!');
+                if (lives <= 0) {
+                  isPlaying = false;
+                  beep(90, 0.6, 'sawtooth');
+                  showToast('Oyun Bitti! Skor: ' + Math.floor(score));
+                  setTimeout(() => { modal.style.display = 'flex'; }, 1000);
+                }
+              }
+              break;
+            }
+          }
+        }
+
+        // Pickups
+        collectibles.forEach(c => {
+          if (!c.taken && Math.hypot((player.x) - (c.x + c.w/2), (groundY - player.offsetY - 40) - (c.y + c.h/2)) < 40) {
+            c.taken = true;
+            beep(750, 0.08, 'sine');
+            if (c.type === 'seed') {
+              seeds++;
+              localStorage.setItem('runner_seeds', seeds.toString());
+              showToast('🌻 +1 Siyah Çekirdek!');
+            } else {
+              score += 50;
+            }
+          }
+        });
+        collectibles = collectibles.filter(c => !c.taken);
+
+        // Weather
+        weatherParticles.forEach(p => {
+          p.y += p.vy * dt;
+          p.x += p.vx * dt;
+          if (p.y > H) { p.y = -10; p.x = Math.random() * W; }
+        });
+      }
+
+      // RENDER
+      ctx.clearRect(0, 0, W, H);
+
+      ctx.save();
+      if (shakeTimer > 0) {
+        ctx.translate((Math.random() - 0.5) * shakeIntensity, (Math.random() - 0.5) * shakeIntensity);
+      }
+
+      // Sky
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
+      if (timeOfDay === 'sunrise') { skyGrad.addColorStop(0, '#1e1b4b'); skyGrad.addColorStop(1, '#f97316'); }
+      else if (timeOfDay === 'noon') { skyGrad.addColorStop(0, '#0284c7'); skyGrad.addColorStop(1, '#bae6fd'); }
+      else if (timeOfDay === 'sunset') { skyGrad.addColorStop(0, '#0f172a'); skyGrad.addColorStop(1, '#c2410c'); }
+      else { skyGrad.addColorStop(0, '#020617'); skyGrad.addColorStop(1, '#1e1b4b'); }
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      // Pavement
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(0, groundY, W, H - groundY);
+      ctx.fillStyle = '#eab308';
+      ctx.fillRect(0, groundY, W, 6);
+
+      // Weather Particles
+      if (weather === 'rain') {
+        ctx.strokeStyle = '#7dd3fc';
+        ctx.lineWidth = 1.5;
+        weatherParticles.forEach(p => {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x - 3, p.y + 12);
+          ctx.stroke();
+        });
+      } else if (weather === 'snow') {
+        ctx.fillStyle = '#ffffff';
+        weatherParticles.forEach(p => {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      // Obstacles
+      obstacles.forEach(o => {
+        if (o.isHigh) {
+          ctx.fillStyle = '#dc2626';
+          ctx.fillRect(o.x, o.y, o.w, 24);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.fillText('⚠️ EĞİL', o.x + 12, o.y + 16);
+        } else {
+          ctx.fillStyle = '#f97316';
+          ctx.beginPath();
+          ctx.moveTo(o.x + o.w/2, o.y);
+          ctx.lineTo(o.x + o.w, o.y + o.h);
+          ctx.lineTo(o.x, o.y + o.h);
+          ctx.fill();
+        }
+      });
+
+      // Collectibles
+      collectibles.forEach(c => {
+        if (c.type === 'seed') {
+          ctx.fillStyle = '#eab308';
+          ctx.beginPath();
+          ctx.ellipse(c.x + 12, c.y + 12, 10, 14, 0.4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.ellipse(c.x + 12, c.y + 12, 7, 11, 0.4, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = '#38bdf8';
+          ctx.beginPath();
+          ctx.arc(c.x + 12, c.y + 12, 10, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      // Player
+      ctx.save();
+      const px = player.x;
+      const py = groundY - player.offsetY;
+      ctx.translate(px, py);
+
+      if (player.invul > 0 && Math.floor(frameCount / 4) % 2 === 0) ctx.globalAlpha = 0.4;
+      if (hasShield) {
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, -45, 52, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      if (charId === 'bibendum') {
+        // Michelin Man
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 2;
+        // Legs
+        ctx.beginPath(); ctx.ellipse(-12, -15, 8, 12, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(12, -15, 8, 12, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        // Body
+        ctx.beginPath(); ctx.ellipse(0, -42, 24, 18, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        // Sash
+        ctx.fillStyle = '#1e3a8a';
+        ctx.fillRect(-18, -46, 36, 8);
+        // Head
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(0, -68, 16, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath(); ctx.arc(-5, -70, 2.5, 0, Math.PI * 2); ctx.arc(5, -70, 2.5, 0, Math.PI * 2); ctx.fill();
+      } else if (charId === 'baldi') {
+        // Baldi
+        ctx.fillStyle = '#1d4ed8'; // legs
+        ctx.fillRect(-7, -35, 5, 35); ctx.fillRect(2, -35, 5, 35);
+        ctx.fillStyle = '#22c55e'; // green shirt
+        ctx.fillRect(-15, -65, 30, 32);
+        ctx.fillStyle = '#fde047'; // head
+        ctx.beginPath(); ctx.arc(0, -78, 15, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 2.5; // red lips
+        ctx.beginPath(); ctx.moveTo(-6, -72); ctx.lineTo(6, -72); ctx.stroke();
+      } else {
+        // Hello Neighbor
+        ctx.fillStyle = '#ea580c'; // orange pants
+        ctx.fillRect(-8, -35, 6, 35); ctx.fillRect(2, -35, 6, 35);
+        ctx.fillStyle = '#1e40af'; // blue vest
+        ctx.fillRect(-16, -65, 32, 32);
+        ctx.fillStyle = '#fdba74'; // face
+        ctx.beginPath(); ctx.arc(0, -78, 15, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#0f172a'; // thick mustache
+        ctx.beginPath(); ctx.ellipse(0, -73, 9, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+
+      ctx.restore();
+    }
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

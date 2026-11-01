@@ -173,6 +173,8 @@ export const HUD: React.FC<HUDProps> = ({
             <span className="hidden sm:inline font-extrabold">MAĞAZA</span>
           </button>
 
+
+
           {/* Sound Mute Toggle Button */}
           <button
             onClick={onToggleMute}
